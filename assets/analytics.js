@@ -56,7 +56,7 @@
     try { localStorage.setItem(key, choice); } catch {}
     apply(choice);
     panel.hidden = true;
-    settings.focus();
+    settings.focus({ preventScroll: true });
   }));
   const choice = readChoice();
   apply(choice);
