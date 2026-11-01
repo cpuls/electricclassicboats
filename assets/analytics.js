@@ -1,0 +1,87 @@
+(() => {
+  const id = 'G-3PK1CL8NR4';
+  const live = ['electricclassicboats.com', 'www.electricclassicboats.com'].includes(location.hostname);
+  const german = document.documentElement.lang === 'de';
+  const key = 'ecb_analytics_consent_v1';
+  let enabled = false;
+  let loaded = false;
+  window.dataLayer = window.dataLayer || [];
+  function gtag() { window.dataLayer.push(arguments); }
+  gtag('consent', 'default', { analytics_storage: 'denied', ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied' });
+  function readChoice() { try { return localStorage.getItem(key); } catch { return null; } }
+  function activate() {
+    if (!live || loaded) return;
+    loaded = true;
+    gtag('js', new Date());
+    gtag('config', id, {
+      allow_google_signals: false,
+      allow_ad_personalization_signals: false,
+      page_location: location.origin + location.pathname,
+      page_referrer: document.referrer ? document.referrer.split(/[?#]/)[0] : '',
+      language: document.documentElement.lang
+    });
+    const script = document.createElement('script');
+    script.async = true;
+    script.src = 'https://www.googletagmanager.com/gtag/js?id=' + id;
+    document.head.append(script);
+  }
+  function apply(choice) {
+    enabled = choice === 'granted';
+    window['ga-disable-' + id] = !enabled;
+    gtag('consent', 'update', { analytics_storage: enabled ? 'granted' : 'denied' });
+    if (enabled) activate();
+    else {
+      for (const cookie of document.cookie.split(';')) {
+        const name = cookie.split('=')[0].trim();
+        if (name === '_ga' || name.startsWith('_ga_')) {
+          for (const domain of ['', ';domain=' + location.hostname, ';domain=.electricclassicboats.com'])
+            document.cookie = name + '=;Max-Age=0;path=/' + domain;
+        }
+      }
+    }
+  }
+  const panel = document.createElement('section');
+  panel.className = 'analytics-choice';
+  panel.setAttribute('aria-label', german ? 'Besuchsstatistik' : 'Visitor analytics');
+  panel.innerHTML = german
+    ? '<p>Dürfen wir Google Analytics verwenden, um Besuche und die Nutzung dieser Website auszuwerten? Dabei werden Analyse-Cookies gesetzt. Ihre Auswahl können Sie unten jederzeit ändern.</p><div><button type="button" data-choice="granted">Zulassen</button><button type="button" data-choice="denied">Ablehnen</button></div>'
+    : '<p>May we use Google Analytics to measure visits and how this site is used? This sets analytics cookies. You can change your choice in the footer at any time.</p><div><button type="button" data-choice="granted">Allow</button><button type="button" data-choice="denied">Decline</button></div>';
+  document.body.append(panel);
+  const settings = document.createElement('button');
+  settings.type = 'button';
+  settings.className = 'analytics-settings';
+  settings.textContent = german ? 'Analyse-Einstellungen' : 'Analytics preferences';
+  document.querySelector('footer').append(settings);
+  settings.addEventListener('click', () => { panel.hidden = false; panel.querySelector('button').focus(); });
+  panel.querySelectorAll('[data-choice]').forEach(button => button.addEventListener('click', () => {
+    const choice = button.dataset.choice;
+    try { localStorage.setItem(key, choice); } catch {}
+    apply(choice);
+    panel.hidden = true;
+    settings.focus();
+  }));
+  const choice = readChoice();
+  apply(choice);
+  panel.hidden = choice === 'granted' || choice === 'denied';
+  function event(name, parameters = {}) {
+    if (enabled && live) gtag('event', name, { ...parameters, page_location: location.origin + location.pathname, site_language: document.documentElement.lang });
+  }
+  document.addEventListener('ecb:inquiry-sent', () => event('generate_lead', { form_name: 'project_inquiry' }));
+  const video = document.querySelector('#riva-film video');
+  if (video) {
+    let started = false;
+    const milestones = new Set();
+    video.addEventListener('play', () => {
+      if (enabled && !started) { started = true; event('video_start', { video_title: 'Riva Junior' }); }
+    });
+    video.addEventListener('timeupdate', () => {
+      if (!enabled || !Number.isFinite(video.duration) || !video.duration) return;
+      const percent = video.currentTime / video.duration * 100;
+      for (const milestone of [25, 50, 75]) if (percent >= milestone && !milestones.has(milestone)) {
+        milestones.add(milestone);
+        event('video_progress', { video_title: 'Riva Junior', video_percent: milestone });
+      }
+    });
+    video.addEventListener('ended', () => event('video_complete', { video_title: 'Riva Junior' }));
+  }
+})();
