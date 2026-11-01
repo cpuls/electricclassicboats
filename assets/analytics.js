@@ -27,10 +27,8 @@
   }
   function apply(choice) {
     enabled = choice === 'granted';
-    window['ga-disable-' + id] = !enabled;
     gtag('consent', 'update', { analytics_storage: enabled ? 'granted' : 'denied' });
-    if (enabled) activate();
-    else {
+    if (!enabled) {
       for (const cookie of document.cookie.split(';')) {
         const name = cookie.split('=')[0].trim();
         if (name === '_ga' || name.startsWith('_ga_')) {
@@ -44,8 +42,8 @@
   panel.className = 'analytics-choice';
   panel.setAttribute('aria-label', german ? 'Besuchsstatistik' : 'Visitor analytics');
   panel.innerHTML = german
-    ? '<p>Dürfen wir Google Analytics verwenden, um Besuche und die Nutzung dieser Website auszuwerten? Dabei werden Analyse-Cookies gesetzt. Ihre Auswahl können Sie unten jederzeit ändern.</p><div><button type="button" data-choice="granted">Zulassen</button><button type="button" data-choice="denied">Ablehnen</button></div>'
-    : '<p>May we use Google Analytics to measure visits and how this site is used? This sets analytics cookies. You can change your choice in the footer at any time.</p><div><button type="button" data-choice="granted">Allow</button><button type="button" data-choice="denied">Decline</button></div>';
+    ? '<p>Google Analytics erhält grundlegende Messdaten ohne Analyse-Cookies. Dürfen wir zusätzlich Analyse-Cookies für genauere Besuchsstatistiken setzen? Ihre Auswahl können Sie unten jederzeit ändern.</p><div><button type="button" data-choice="granted">Cookies zulassen</button><button type="button" data-choice="denied">Cookies ablehnen</button></div>'
+    : '<p>Google Analytics receives basic measurements without analytics cookies. May we also use analytics cookies for more detailed visit statistics? You can change your choice in the footer at any time.</p><div><button type="button" data-choice="granted">Allow cookies</button><button type="button" data-choice="denied">Decline cookies</button></div>';
   document.body.append(panel);
   const settings = document.createElement('button');
   settings.type = 'button';
@@ -62,9 +60,11 @@
   }));
   const choice = readChoice();
   apply(choice);
+  activate(); // Advanced Consent Mode: load with analytics_storage denied until allowed.
   panel.hidden = choice === 'granted' || choice === 'denied';
+  if (!panel.hidden) event('consent_prompt_view');
   function event(name, parameters = {}) {
-    if (enabled && live) gtag('event', name, { ...parameters, page_location: location.origin + location.pathname, site_language: document.documentElement.lang });
+    if (live) gtag('event', name, { ...parameters, page_location: location.origin + location.pathname, site_language: document.documentElement.lang });
   }
   document.addEventListener('ecb:inquiry-sent', () => event('generate_lead', { form_name: 'project_inquiry' }));
   const video = document.querySelector('#riva-film video');
@@ -72,10 +72,10 @@
     let started = false;
     const milestones = new Set();
     video.addEventListener('play', () => {
-      if (enabled && !started) { started = true; event('video_start', { video_title: 'Riva Junior' }); }
+      if (!started) { started = true; event('video_start', { video_title: 'Riva Junior' }); }
     });
     video.addEventListener('timeupdate', () => {
-      if (!enabled || !Number.isFinite(video.duration) || !video.duration) return;
+      if (!Number.isFinite(video.duration) || !video.duration) return;
       const percent = video.currentTime / video.duration * 100;
       for (const milestone of [25, 50, 75]) if (percent >= milestone && !milestones.has(milestone)) {
         milestones.add(milestone);
